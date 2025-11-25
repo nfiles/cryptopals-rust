@@ -1,8 +1,11 @@
 extern crate utils;
 
-use std::fs;
+use std::{
+    fs::{self, File},
+    io::{self, BufRead},
+};
 use utils::{
-    ciphers::{frequency::CharSet, single_byte_xor::SingleByteXorDecryptor},
+    ciphers::single_byte_xor::SingleByteXorDecryptor,
     encoding::{base64_encode, hex_decode, hex_encode},
     xor_buffers,
 };
@@ -37,7 +40,7 @@ fn problem02_fixed_xor() {
 #[test]
 fn problem03_single_byte_xor() {
     let corpus_text = fs::read_to_string(CORPUS).expect("unable to read file");
-    let decryptor = SingleByteXorDecryptor::from_corpus(CharSet::default(), &corpus_text);
+    let decryptor = SingleByteXorDecryptor::from_corpus(&corpus_text);
 
     let encoded =
         hex_decode("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736");
@@ -46,4 +49,31 @@ fn problem03_single_byte_xor() {
 
     assert_eq!(88u8, result.key);
     assert_eq!("Cooking MC's like a pound of bacon", result.cleartext);
+}
+
+#[test]
+fn problem04_detect_single_byte_xor() {
+    let corpus_text = fs::read_to_string(CORPUS).expect("unable to read file");
+    let decryptor = SingleByteXorDecryptor::from_corpus(&corpus_text);
+
+    let input_file = File::open("assets/set01-4.txt").expect("unable to open file");
+    let input_lines = io::BufReader::new(input_file).lines().map_while(Result::ok);
+
+    let options: Vec<_> = input_lines
+        .filter_map(|encoded| {
+            let bytes = hex_decode(&encoded);
+            match decryptor.decrypt(&bytes) {
+                Some(cipher) => Some(cipher),
+                None => None,
+            }
+        })
+        .collect();
+
+    let result = options
+        .iter()
+        .min_by(|cipher1, cipher2| f64::total_cmp(&cipher1.score, &cipher2.score))
+        .expect("unable to decrypt any lines");
+
+    assert_eq!(53, result.key);
+    assert_eq!("Now that the party is jumping\n", result.cleartext);
 }

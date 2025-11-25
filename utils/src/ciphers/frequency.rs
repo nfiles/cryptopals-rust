@@ -1,34 +1,14 @@
 use std::collections::{HashMap, HashSet};
 
 pub type FrequencyMap = HashMap<char, f64>;
-
-pub struct CharSet {
-    alphabet: HashSet<char>,
-    transform: fn(ch: char) -> char,
+pub struct Frequency {
+    map: FrequencyMap,
 }
 
-impl CharSet {
-    pub fn default() -> Self {
-        CharSet {
-            alphabet: ('a'..='z').collect(),
-            transform: |ch| ch.to_ascii_lowercase(),
-        }
-    }
-
-    pub fn new(alphabet: HashSet<char>) -> Self {
-        CharSet {
-            alphabet,
-            transform: |ch| ch.to_ascii_lowercase(),
-        }
-    }
-
-    pub fn build_freq_from_corpus(self: &Self, corpus: &str) -> FrequencyMap {
+impl Frequency {
+    pub fn from_corpus(corpus: &str) -> Self {
         let mut totals: HashMap<char, u32> = HashMap::new();
-        for ch in corpus
-            .chars()
-            .map(|ch| (self.transform)(ch))
-            .filter(|&ch| self.alphabet.contains(&ch))
-        {
+        for ch in corpus.chars() {
             totals
                 .entry(ch)
                 .and_modify(|count| *count += 1)
@@ -38,21 +18,29 @@ impl CharSet {
         let grand_total: u32 = totals.values().sum();
 
         if grand_total == 0 {
-            return HashMap::new();
+            return Frequency {
+                map: HashMap::new(),
+            };
         }
 
-        totals
+        let map: FrequencyMap = totals
             .iter()
             .map(|(&ch, &total)| (ch, (f64::from(total) / f64::from(grand_total))))
-            .collect()
+            .collect();
+
+        Frequency { map }
     }
 
-    pub fn compare_freq(self: &Self, left: &FrequencyMap, right: &FrequencyMap) -> f64 {
-        self.alphabet
+    pub fn compare_with(self: &Self, right: &Self) -> f64 {
+        let left_keys = self.map.keys();
+        let right_keys = right.map.keys();
+
+        let alphabet: HashSet<_> = left_keys.chain(right_keys).into_iter().collect();
+        alphabet
             .iter()
             .map(|ch| {
-                let freq_left = left.get(ch).copied().unwrap_or_default();
-                let freq_right = right.get(ch).copied().unwrap_or_default();
+                let freq_left = self.map.get(ch).copied().unwrap_or_default();
+                let freq_right = right.map.get(ch).copied().unwrap_or_default();
                 (freq_left - freq_right).abs()
             })
             .sum()
@@ -88,11 +76,9 @@ mod tests {
             ),
         ];
 
-        let charset = CharSet::default();
-
         for (input, expected) in cases {
-            let actual = charset.build_freq_from_corpus(&input);
-            assert_eq!(actual, expected);
+            let actual = Frequency::from_corpus(&input);
+            assert_eq!(actual.map, expected);
         }
     }
 }
