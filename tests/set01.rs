@@ -5,7 +5,9 @@ use std::{
     io::{self, BufRead},
 };
 use utils::{
-    ciphers::single_byte_xor::SingleByteXorDecryptor,
+    ciphers::{
+        repeating_key_xor::RepeatingKeyXorDecryptor, single_byte_xor::SingleByteXorDecryptor,
+    },
     encoding::{base64_encode, hex_decode, hex_encode},
     xor_buffers, xor_with_key,
 };
@@ -62,10 +64,7 @@ fn challenge04_detect_single_byte_xor() {
     let options: Vec<_> = input_lines
         .filter_map(|encoded| {
             let bytes = hex_decode(&encoded);
-            match decryptor.decrypt(&bytes) {
-                Some(cipher) => Some(cipher),
-                None => None,
-            }
+            decryptor.decrypt(&bytes)
         })
         .collect();
 
@@ -90,4 +89,17 @@ a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
     let actual = hex_encode(&xor_with_key(input.iter().cloned(), key).collect::<Vec<_>>());
 
     assert_eq!(actual, expected);
+}
+
+#[test]
+fn challenge06_break_repeating_key_xor() {
+    let corpus_text = fs::read_to_string(CORPUS).expect("unable to read corpus");
+    let decryptor = RepeatingKeyXorDecryptor::from_corpus(&corpus_text);
+
+    let encrypted = fs::read_to_string("assets/set01-6.txt").expect("unable to read input");
+    let cipher = decryptor
+        .decrypt(encrypted.as_bytes())
+        .expect("unable to decrypt");
+
+    println!("key: {:?}", cipher.key);
 }

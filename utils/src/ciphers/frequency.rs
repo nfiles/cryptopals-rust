@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 pub type FrequencyMap = HashMap<char, f64>;
+
+#[derive(Clone)]
 pub struct Frequency {
     map: FrequencyMap,
 }

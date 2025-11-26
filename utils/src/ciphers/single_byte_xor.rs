@@ -1,5 +1,3 @@
-use core::f64;
-
 use crate::ciphers::frequency::Frequency;
 use crate::xor_with_byte;
 
@@ -14,6 +12,10 @@ pub struct SingleByteXorDecryptor {
 }
 
 impl SingleByteXorDecryptor {
+    pub fn with_standard_freq(standard_freq: Frequency) -> SingleByteXorDecryptor {
+        SingleByteXorDecryptor { standard_freq }
+    }
+
     pub fn from_corpus(corpus: &str) -> SingleByteXorDecryptor {
         let standard_freq = Frequency::from_corpus(&corpus);
         SingleByteXorDecryptor { standard_freq }

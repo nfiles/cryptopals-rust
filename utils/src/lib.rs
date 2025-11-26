@@ -1,5 +1,6 @@
 use std::iter::repeat;
 
+pub mod analysis;
 pub mod ciphers;
 pub mod encoding;
 
