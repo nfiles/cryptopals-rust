@@ -7,7 +7,7 @@ use std::{
 use utils::{
     ciphers::single_byte_xor::SingleByteXorDecryptor,
     encoding::{base64_encode, hex_decode, hex_encode},
-    xor_buffers,
+    xor_buffers, xor_with_key,
 };
 
 const CORPUS: &str = "assets/pg19033-alice-in-wonderland.txt";
@@ -76,4 +76,18 @@ fn challenge04_detect_single_byte_xor() {
 
     assert_eq!(53, result.key);
     assert_eq!("Now that the party is jumping\n", result.cleartext);
+}
+
+#[test]
+fn challenge05_repeating_key_xor() {
+    let input = b"Burning 'em, if you ain't quick and nimble
+I go crazy when I hear a cymbal";
+    let key = b"ICE";
+    let expected = "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272
+a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f"
+        .replace("\n", "");
+
+    let actual = hex_encode(&xor_with_key(input.iter().cloned(), key).collect::<Vec<_>>());
+
+    assert_eq!(actual, expected);
 }
