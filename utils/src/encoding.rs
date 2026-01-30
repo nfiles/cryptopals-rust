@@ -1,4 +1,4 @@
-use base64::{Engine, engine::general_purpose::STANDARD_NO_PAD};
+use base64::{Engine, prelude::BASE64_STANDARD};
 use hex;
 
 pub fn hex_encode(bytes: &[u8]) -> String {
@@ -10,9 +10,15 @@ pub fn hex_decode(s: &str) -> Vec<u8> {
 }
 
 pub fn base64_encode(bytes: &[u8]) -> String {
-    STANDARD_NO_PAD.encode(bytes)
+    BASE64_STANDARD.encode(&bytes)
 }
 
 pub fn base64_decode(bytes: &[u8]) -> Vec<u8> {
-    STANDARD_NO_PAD.decode(bytes).expect("unable to decode")
+    let stripped: Vec<u8> = bytes
+        .into_iter()
+        .cloned()
+        .filter(|&x| x != b'\r' && x != b'\n')
+        .collect();
+
+    BASE64_STANDARD.decode(stripped).expect("unable to decode")
 }

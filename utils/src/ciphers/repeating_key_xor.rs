@@ -1,40 +1,32 @@
 use std::iter::repeat_with;
 
 use crate::{
-    analysis::get_hamming_distance,
-    ciphers::{
-        frequency::Frequency,
-        single_byte_xor::{SingleByteXorCipher, SingleByteXorDecryptor},
-    },
+    analysis::get_hamming_distance, ciphers::single_byte_xor::SingleByteXorDecryptor,
+    frequency::Frequency, xor_with_key,
 };
 
 pub fn get_probable_key_sizes(encrypted: &[u8]) -> Vec<usize> {
-    if encrypted.len() == 1 {
-        return vec![1];
-    }
+    // to get a better average, we want to examine a consistent multiple of the key length
+    let max_key_length = 40;
+    let key_length_multiplier = (encrypted.len() / max_key_length).min(3);
 
-    let mut possible_key_sizes: Vec<_> = (2..40)
-        // only consider keys that are shorter than the ciphertext and are even multiples
-        .filter(|&keysize| keysize < encrypted.len())
-        .filter_map(|keysize| {
-            let chunk1 = get_chunk(encrypted, keysize, 0);
-            let chunk2 = get_chunk(encrypted, keysize, 1);
-
+    let mut possible_key_sizes: Vec<_> = (2..=max_key_length)
+        // only consider keys that are shorter than the ciphertext
+        .filter(|&length| length < encrypted.len())
+        .map(|length| {
+            let chunk_length = length * key_length_multiplier;
+            let chunk1 = get_chunk(encrypted, chunk_length, 0);
+            let chunk2 = get_chunk(encrypted, chunk_length, 1);
             let distance = get_hamming_distance(&chunk1, &chunk2);
-            let normalized = distance as f64 / keysize as f64;
+            let normalized = distance as f64 / chunk_length as f64;
 
-            Some((normalized, keysize))
+            (normalized, length)
         })
         .collect();
 
     possible_key_sizes.sort_by(|(left, _), (right, _)| left.total_cmp(&right));
 
-    let num_possible_key_sizes = possible_key_sizes.len() / 5;
-    let num_possible_key_sizes = match num_possible_key_sizes {
-        0 => 1,
-        _ => num_possible_key_sizes,
-    };
-
+    let num_possible_key_sizes = (possible_key_sizes.len() / 3).max(40);
     possible_key_sizes
         .iter()
         .take(num_possible_key_sizes)
@@ -81,27 +73,26 @@ pub struct RepeatingKeyXorCipher {
 
 pub struct RepeatingKeyXorDecryptor {
     standard_freq: Frequency,
+    single_byte_xor_decryptor: SingleByteXorDecryptor,
 }
 
 impl RepeatingKeyXorDecryptor {
     pub fn from_corpus(corpus: &str) -> RepeatingKeyXorDecryptor {
-        let standard_freq = Frequency::from_corpus(&corpus);
-        RepeatingKeyXorDecryptor { standard_freq }
+        let standard_freq = Frequency::analyze(&corpus);
+        let single_byte_xor_decryptor =
+            SingleByteXorDecryptor::with_standard_freq(standard_freq.clone());
+
+        RepeatingKeyXorDecryptor {
+            standard_freq,
+            single_byte_xor_decryptor,
+        }
     }
 
     pub fn decrypt(self: &Self, encrypted: &[u8]) -> Option<RepeatingKeyXorCipher> {
-        let probable_key_sizes = get_probable_key_sizes(encrypted);
-
-        let solutions: Vec<_> = probable_key_sizes
+        get_probable_key_sizes(encrypted)
             .iter()
-            .cloned()
-            .filter_map(|keysize| self.decrypt_with_keysize(encrypted, keysize))
-            .collect();
-
-        solutions
-            .iter()
-            .min_by(|a, b| a.score.total_cmp(&b.score))
-            .cloned()
+            .filter_map(|&keysize| self.decrypt_with_keysize(encrypted, keysize))
+            .max_by(|a, b| a.score.total_cmp(&b.score))
     }
 
     fn decrypt_with_keysize(
@@ -109,20 +100,19 @@ impl RepeatingKeyXorDecryptor {
         encrypted: &[u8],
         keysize: usize,
     ) -> Option<RepeatingKeyXorCipher> {
-        let single_byte_xor_decryptor =
-            SingleByteXorDecryptor::with_standard_freq(self.standard_freq.clone());
-
-        let mut solution_bytes: Vec<SingleByteXorCipher> = Vec::new();
+        // combine all of the bytes into a single string
+        let mut key: Vec<u8> = Vec::new();
         for slice in get_vertical_slices(encrypted, keysize) {
-            let solution = single_byte_xor_decryptor.decrypt(&slice)?;
-            solution_bytes.push(solution);
+            // find the most likely solution for each vertical slice
+            let cipher = self.single_byte_xor_decryptor.decrypt(&slice)?;
+            key.push(cipher.key);
         }
 
-        let score =
-            solution_bytes.iter().map(|c| &c.score).sum::<f64>() / (solution_bytes.len() as f64);
-        let key: Vec<_> = solution_bytes.iter().map(|s| s.key).collect();
+        let cleartext_bytes = xor_with_key(encrypted.iter().cloned(), &key).collect();
+        let cleartext = String::from_utf8(cleartext_bytes).ok()?;
+        let score = self.standard_freq.score_str(&cleartext);
 
-        Some(RepeatingKeyXorCipher { score, key })
+        Some(RepeatingKeyXorCipher { key, score })
     }
 }
 

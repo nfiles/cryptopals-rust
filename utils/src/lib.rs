@@ -3,6 +3,7 @@ use std::iter::repeat;
 pub mod analysis;
 pub mod ciphers;
 pub mod encoding;
+pub mod frequency;
 
 pub fn xor_buffers(buffer1: &[u8], buffer2: &[u8]) -> Vec<u8> {
     buffer1
@@ -39,7 +40,7 @@ pub mod tests {
         let key = 2;
         let expected = vec![2, 3, 0, 1];
 
-        let actual: Vec<_> = xor_with_byte(input.iter().copied(), key).collect();
+        let actual: Vec<_> = xor_with_byte(input.into_iter(), key).collect();
 
         assert_eq!(expected, actual);
     }

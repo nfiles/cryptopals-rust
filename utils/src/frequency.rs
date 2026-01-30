@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 pub type FrequencyMap = HashMap<char, f64>;
 
@@ -8,7 +8,7 @@ pub struct Frequency {
 }
 
 impl Frequency {
-    pub fn from_corpus(corpus: &str) -> Self {
+    pub fn analyze(corpus: &str) -> Self {
         let mut totals: HashMap<char, u32> = HashMap::new();
         for ch in corpus.chars() {
             totals
@@ -33,19 +33,20 @@ impl Frequency {
         Frequency { map }
     }
 
-    pub fn compare_with(self: &Self, right: &Self) -> f64 {
-        let left_keys = self.map.keys();
-        let right_keys = right.map.keys();
+    pub fn score_str(self: &Self, text: &str) -> f64 {
+        let chars: Vec<char> = text.chars().collect();
+        self.score(&chars)
+    }
 
-        let alphabet: HashSet<_> = left_keys.chain(right_keys).into_iter().collect();
-        alphabet
+    pub fn score(self: &Self, stream: &[char]) -> f64 {
+        let total_chars = stream.len() as f64;
+
+        stream
             .iter()
-            .map(|ch| {
-                let freq_left = self.map.get(ch).copied().unwrap_or_default();
-                let freq_right = right.map.get(ch).copied().unwrap_or_default();
-                (freq_left - freq_right).abs()
-            })
-            .sum()
+            .cloned()
+            .map(|ch| self.map.get(&ch).copied().unwrap_or_default())
+            .sum::<f64>()
+            / total_chars
     }
 }
 
@@ -63,23 +64,38 @@ mod tests {
             ),
             (
                 "ABCD",
-                HashMap::from([('a', 0.25), ('b', 0.25), ('c', 0.25), ('d', 0.25)]),
+                HashMap::from([('A', 0.25), ('B', 0.25), ('C', 0.25), ('D', 0.25)]),
             ),
             (
-                "Hello, you!",
+                "ABCDabcd",
                 HashMap::from([
-                    ('h', 0.125),
-                    ('e', 0.125),
-                    ('l', 0.25),
-                    ('o', 0.25),
-                    ('y', 0.125),
-                    ('u', 0.125),
+                    ('A', 0.125),
+                    ('B', 0.125),
+                    ('C', 0.125),
+                    ('D', 0.125),
+                    ('a', 0.125),
+                    ('b', 0.125),
+                    ('c', 0.125),
+                    ('d', 0.125),
+                ]),
+            ),
+            (
+                "Hello you!",
+                HashMap::from([
+                    ('H', 0.1),
+                    ('e', 0.1),
+                    ('l', 0.2),
+                    ('o', 0.2),
+                    (' ', 0.1),
+                    ('y', 0.1),
+                    ('u', 0.1),
+                    ('!', 0.1),
                 ]),
             ),
         ];
 
         for (input, expected) in cases {
-            let actual = Frequency::from_corpus(&input);
+            let actual = Frequency::analyze(&input);
             assert_eq!(actual.map, expected);
         }
     }
