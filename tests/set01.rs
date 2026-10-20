@@ -1,10 +1,12 @@
 extern crate utils;
 
+use base64::{Engine, engine::general_purpose};
 use std::{
     fs::{self, File},
     io::{self, BufRead},
 };
 use utils::{
+    aes::aes_128_ecb_decrypt,
     ciphers::{
         repeating_key_xor::RepeatingKeyXorDecryptor, single_byte_xor::SingleByteXorDecryptor,
     },
@@ -102,4 +104,24 @@ fn challenge06_break_repeating_key_xor() {
 
     let actual_key = String::from_utf8(cipher.key).expect("unable to read as ascii");
     assert_eq!("Terminator X: Bring the noise", actual_key);
+}
+
+#[test]
+fn challenge07_aes128_decrypt() {
+    let key = "YELLOW SUBMARINE".as_bytes();
+
+    let input = fs::read_to_string("assets/set01-7.txt")
+        .expect("unable to read input file")
+        .replace("\r", "")
+        .replace("\n", "");
+    let input = general_purpose::STANDARD
+        .decode(input)
+        .expect("failed to base64 decode the input file");
+
+    let expected = fs::read_to_string("assets/set01-7-decrypted.txt")
+        .expect("unable to read decrypted input")
+        .replace("\r", "");
+
+    let plaintext = aes_128_ecb_decrypt(&input, key);
+    assert_eq!(expected, plaintext);
 }
