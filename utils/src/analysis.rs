@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 pub fn get_hamming_distance(left: &[u8], right: &[u8]) -> usize {
     let mut distance = left.len().abs_diff(right.len()) * 8;
 
@@ -13,6 +15,19 @@ pub fn get_hamming_distance(left: &[u8], right: &[u8]) -> usize {
     }
 
     distance
+}
+
+pub fn detect_repeated_block(size: usize, input: &[u8]) -> bool {
+    let mut found = HashSet::new();
+
+    for chunk in input.chunks(size) {
+        // if any block appears more than once, return true
+        if !found.insert(chunk) {
+            return true;
+        }
+    }
+
+    false
 }
 
 #[cfg(test)]

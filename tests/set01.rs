@@ -3,9 +3,10 @@ extern crate utils;
 use base64::{Engine, engine::general_purpose};
 use std::{
     fs::{self, File},
-    io::{self, BufRead},
+    io::{self, BufRead, LineWriter},
 };
 use utils::{
+    analysis::detect_repeated_block,
     ciphers::{
         aes::aes_128_ecb_decrypt, repeating_key_xor::RepeatingKeyXorDecryptor,
         single_byte_xor::SingleByteXorDecryptor,
@@ -107,7 +108,7 @@ fn challenge06_break_repeating_key_xor() {
 }
 
 #[test]
-fn challenge07_aes128_decrypt() {
+fn challenge07_decrypt_aes_128_ecb() {
     let key = "YELLOW SUBMARINE".as_bytes();
 
     let input = {
@@ -119,8 +120,8 @@ fn challenge07_aes128_decrypt() {
             .expect("failed to base64 decode the input file")
     };
 
-    let expected = fs::read_to_string("assets/set01-7-decrypted.txt")
-        .expect("unable to read decrypted input");
+    let expected =
+        fs::read_to_string("assets/set01-7-decrypted.txt").expect("unable to read decrypted input");
 
     let plaintext = {
         let decrypted_bytes = aes_128_ecb_decrypt(&input, key);
@@ -128,4 +129,16 @@ fn challenge07_aes128_decrypt() {
     };
 
     assert_eq!(expected, plaintext);
+}
+
+#[test]
+fn challenge08_detect_aes_128_ecb() {
+    let size = 16;
+    let input = fs::read_to_string("assets/set01-8.txt").expect("unable to read input file");
+    let line_with_repeated_block = input
+        .lines()
+        .enumerate()
+        .find(|x| detect_repeated_block(size, x.1.as_bytes()));
+
+    assert_eq!(132, line_with_repeated_block.unwrap().0)
 }
