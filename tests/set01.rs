@@ -113,7 +113,6 @@ fn challenge07_aes128_decrypt() {
     let input = {
         let base64_input = fs::read_to_string("assets/set01-7.txt")
             .expect("unable to read input file")
-            .replace("\r", "")
             .replace("\n", "");
         general_purpose::STANDARD
             .decode(base64_input)
@@ -121,8 +120,7 @@ fn challenge07_aes128_decrypt() {
     };
 
     let expected = fs::read_to_string("assets/set01-7-decrypted.txt")
-        .expect("unable to read decrypted input")
-        .replace("\r", "");
+        .expect("unable to read decrypted input");
 
     let plaintext = {
         let decrypted_bytes = aes_128_ecb_decrypt(&input, key);
