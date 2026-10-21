@@ -6,9 +6,9 @@ use std::{
     io::{self, BufRead},
 };
 use utils::{
-    aes::aes_128_ecb_decrypt,
     ciphers::{
-        repeating_key_xor::RepeatingKeyXorDecryptor, single_byte_xor::SingleByteXorDecryptor,
+        aes::aes_128_ecb_decrypt, repeating_key_xor::RepeatingKeyXorDecryptor,
+        single_byte_xor::SingleByteXorDecryptor,
     },
     encoding::{base64_decode, base64_encode, hex_decode, hex_encode},
     xor_buffers, xor_with_key,
@@ -110,18 +110,24 @@ fn challenge06_break_repeating_key_xor() {
 fn challenge07_aes128_decrypt() {
     let key = "YELLOW SUBMARINE".as_bytes();
 
-    let input = fs::read_to_string("assets/set01-7.txt")
-        .expect("unable to read input file")
-        .replace("\r", "")
-        .replace("\n", "");
-    let input = general_purpose::STANDARD
-        .decode(input)
-        .expect("failed to base64 decode the input file");
+    let input = {
+        let base64_input = fs::read_to_string("assets/set01-7.txt")
+            .expect("unable to read input file")
+            .replace("\r", "")
+            .replace("\n", "");
+        general_purpose::STANDARD
+            .decode(base64_input)
+            .expect("failed to base64 decode the input file")
+    };
 
     let expected = fs::read_to_string("assets/set01-7-decrypted.txt")
         .expect("unable to read decrypted input")
         .replace("\r", "");
 
-    let plaintext = aes_128_ecb_decrypt(&input, key);
+    let plaintext = {
+        let decrypted_bytes = aes_128_ecb_decrypt(&input, key);
+        String::from_utf8(decrypted_bytes).expect("decrypted bytes are not a valid utf-8 string")
+    };
+
     assert_eq!(expected, plaintext);
 }
