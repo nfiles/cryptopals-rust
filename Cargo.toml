@@ -9,3 +9,6 @@ utils = { path = "./utils" }
 
 [workspace]
 members = ["utils"]
+
+[dev-dependencies]
+test-case = "3.4.0"

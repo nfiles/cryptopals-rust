@@ -3,7 +3,7 @@ extern crate utils;
 use base64::{Engine, engine::general_purpose};
 use std::{
     fs::{self, File},
-    io::{self, BufRead, LineWriter},
+    io::{self, BufRead},
 };
 use utils::{
     analysis::detect_repeated_block,
