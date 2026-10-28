@@ -28,7 +28,7 @@ fn challenge09_pkcs7_unpadding(success: bool, padding: Vec<u8>) {
     let input: Vec<_> = b"YELLOW SUBMARINE"
         .iter()
         .cloned()
-        .chain(padding.iter().cloned())
+        .chain(padding)
         .collect();
 
     let pkcs7_padding = Pkcs7Padding::create(4).unwrap();
